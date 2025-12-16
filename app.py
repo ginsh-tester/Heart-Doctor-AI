@@ -20,7 +20,7 @@ st.set_page_config(
     page_title="دكتور القلب الذكي | Smart Heart Doctor",
     page_icon="🫀",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ==========================================
@@ -87,16 +87,154 @@ st.markdown("""
         100% { opacity: 1; transform: scale(1.1); }
     }
 
-    /* SIDEBAR FIX */
+    /* HIDE NATIVE STREAMLIT SIDEBAR COMPLETELY */
     section[data-testid="stSidebar"] {
-        background-color: #0f172a; /* Explicit dark bg */
-        border-left: 1px solid rgba(255,255,255,0.05);
-        box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        display: none !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
+    }
+
+    /* FLOATING HEART BUTTON */
+    .floating-heart-btn {
+        position: fixed;
+        bottom: 80px;
+        right: 25px;
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff1744 0%, #d32f2f 100%);
+        border: none;
+        cursor: pointer;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 25px rgba(255, 23, 68, 0.5);
+        animation: heartPulse 1.5s ease-in-out infinite, floatAround 6s ease-in-out infinite;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .floating-heart-btn:hover {
+        transform: scale(1.15);
+        box-shadow: 0 10px 40px rgba(255, 23, 68, 0.7);
+        animation-play-state: paused;
+    }
+    .floating-heart-btn span {
+        font-size: 2rem;
+        color: white;
     }
     
-    /* Hide specific elements when collapsed if they bleed through (Common Streamlit Glitch Fix) */
-    section[data-testid="stSidebar"][aria-expanded="false"] {
-        margin-left: -20px; 
+    @keyframes heartPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    @keyframes floatAround {
+        0%, 100% { bottom: 80px; right: 25px; }
+        25% { bottom: 100px; right: 30px; }
+        50% { bottom: 90px; right: 20px; }
+        75% { bottom: 85px; right: 35px; }
+    }
+
+    /* CUSTOM SIDEBAR PANEL */
+    .custom-sidebar-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+    }
+    .custom-sidebar-overlay.open {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .custom-sidebar-panel {
+        position: fixed;
+        top: 0;
+        right: -350px;
+        width: 320px;
+        height: 100vh;
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        z-index: 10001;
+        padding: 25px;
+        overflow-y: auto;
+        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .custom-sidebar-panel.open {
+        right: 0;
+    }
+    
+    .sidebar-close-btn {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #ff1744;
+        transition: all 0.3s;
+    }
+    .sidebar-close-btn:hover {
+        background: rgba(255, 23, 68, 0.2);
+        transform: rotate(90deg);
+    }
+    
+    .sidebar-title {
+        text-align: center;
+        margin-top: 50px;
+        margin-bottom: 20px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    
+    .sidebar-nav-item {
+        display: block;
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main) !important;
+        text-decoration: none !important;
+        font-size: 1.05rem;
+        font-weight: 500;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+        cursor: pointer;
+    }
+    .sidebar-nav-item:hover {
+        background: rgba(0, 230, 118, 0.15);
+        border-color: var(--primary);
+        transform: translateX(-5px);
+    }
+    .sidebar-nav-item.active {
+        background: linear-gradient(90deg, rgba(0, 230, 118, 0.2), transparent);
+        border-right: 3px solid var(--primary);
+    }
+    
+    .sidebar-footer {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-muted);
     }
     
     /* GLASSMORPHISM CARDS */
@@ -335,31 +473,124 @@ if 'form_data' not in st.session_state:
     }
 if 'patient_history' not in st.session_state:
     st.session_state.patient_history = []
+if 'sidebar_open' not in st.session_state:
+    st.session_state.sidebar_open = False
 
 # ==========================================
-# 5. NAVIGATION SIDEBAR
+# 5. CUSTOM FLOATING SIDEBAR SYSTEM
 # ==========================================
-with st.sidebar:
-    st.markdown("## 🫀 دكتور القلب الذكي")
-    st.markdown("---")
+
+# Navigation pages list
+NAV_PAGES = ["🏠 الرئيسية", "🩺 غرفة الكشف", "📊 لوحة القيادة", "📋 السجلات", "📚 الموسوعة"]
+
+# Handle sidebar open/close via query params workaround
+if 'nav_action' not in st.session_state:
+    st.session_state.nav_action = None
+
+def toggle_sidebar():
+    st.session_state.sidebar_open = not st.session_state.sidebar_open
+
+def close_sidebar():
+    st.session_state.sidebar_open = False
+
+def navigate_to(page_name):
+    st.session_state.current_page = page_name
+    st.session_state.sidebar_open = False
+
+# Render custom sidebar HTML
+def render_custom_sidebar():
+    is_open = st.session_state.sidebar_open
+    open_class = "open" if is_open else ""
     
-    page = st.radio(
-        "التنقل",
-        ["🏠 الرئيسية", "🩺 غرفة الكشف", "📊 لوحة القيادة", "📋 السجلات", "📚 الموسوعة"],
-        label_visibility="collapsed"
-    )
-    st.session_state.current_page = page
+    # Build nav items HTML
+    nav_items_html = ""
+    for p in NAV_PAGES:
+        active_class = "active" if st.session_state.current_page == p else ""
+        nav_items_html += f'<div class="sidebar-nav-item {active_class}" data-page="{p}">{p}</div>'
     
-    st.markdown("---")
-    st.caption(f"📊 الفحوصات: {len(st.session_state.patient_history)}")
+    model_status = "✅ النموذج جاهز" if model else "❌ النموذج غير متاح"
+    model_color = "#00e676" if model else "#ff1744"
     
-    if model:
-        st.success("✅ النموذج جاهز")
-    else:
-        st.error("❌ النموذج غير متاح")
-    
-    st.markdown("---")
-    show_model_info()
+    sidebar_html = f"""
+    <div class="custom-sidebar-overlay {open_class}" onclick="closeSidebar()"></div>
+    <div class="custom-sidebar-panel {open_class}">
+        <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+        <div class="sidebar-title">🫀 دكتور القلب الذكي</div>
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        {nav_items_html}
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+            📊 الفحوصات: {len(st.session_state.patient_history)}
+        </div>
+        <div style="text-align: center; margin-top: 10px; color: {model_color}; font-weight: 600;">
+            {model_status}
+        </div>
+        <div class="sidebar-footer">
+            نظام ذكاء اصطناعي للكشف عن أمراض القلب
+        </div>
+    </div>
+    """
+    st.markdown(sidebar_html, unsafe_allow_html=True)
+
+# Render floating heart button (only when sidebar is closed)
+def render_floating_button():
+    if not st.session_state.sidebar_open:
+        st.markdown("""
+        <button class="floating-heart-btn" onclick="openSidebar()">
+            <span>🫀</span>
+        </button>
+        """, unsafe_allow_html=True)
+
+# JavaScript for sidebar control
+st.markdown("""
+<script>
+function openSidebar() {
+    // Use Streamlit's setComponentValue or a hidden element trick
+    // For simplicity, we'll use a form submission approach
+    const overlay = document.querySelector('.custom-sidebar-overlay');
+    const panel = document.querySelector('.custom-sidebar-panel');
+    const btn = document.querySelector('.floating-heart-btn');
+    if (overlay) overlay.classList.add('open');
+    if (panel) panel.classList.add('open');
+    if (btn) btn.style.display = 'none';
+}
+
+function closeSidebar() {
+    const overlay = document.querySelector('.custom-sidebar-overlay');
+    const panel = document.querySelector('.custom-sidebar-panel');
+    const btn = document.querySelector('.floating-heart-btn');
+    if (overlay) overlay.classList.remove('open');
+    if (panel) panel.classList.remove('open');
+    if (btn) btn.style.display = 'flex';
+}
+
+// Add click handlers to nav items
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('sidebar-nav-item')) {
+        const page = e.target.getAttribute('data-page');
+        // Store in sessionStorage and reload to trigger Streamlit update
+        sessionStorage.setItem('selected_page', page);
+        // We need a way to communicate back to Streamlit
+        // For now, close the sidebar visually
+        closeSidebar();
+    }
+});
+</script>
+""", unsafe_allow_html=True)
+
+# Render sidebar components
+render_custom_sidebar()
+render_floating_button()
+
+# Add Streamlit buttons for actual navigation (hidden visually but functional)
+# We use columns with very small width to hide them
+with st.container():
+    nav_cols = st.columns([1, 1, 1, 1, 1])
+    for i, page_name in enumerate(NAV_PAGES):
+        with nav_cols[i]:
+            if st.button(page_name, key=f"nav_{i}", use_container_width=True):
+                st.session_state.current_page = page_name
+                st.rerun()
 
 # ==========================================
 # 6. LANDING PAGE
