@@ -479,48 +479,188 @@ if 'sidebar_open' not in st.session_state:
 # ==========================================
 # 5. CUSTOM FLOATING SIDEBAR SYSTEM
 # ==========================================
+import streamlit.components.v1 as components
 
 # Navigation pages list
 NAV_PAGES = ["🏠 الرئيسية", "🩺 غرفة الكشف", "📊 لوحة القيادة", "📋 السجلات", "📚 الموسوعة"]
 
-# Handle sidebar open/close via query params workaround
-if 'nav_action' not in st.session_state:
-    st.session_state.nav_action = None
+# Build nav items HTML
+nav_items_html = ""
+for p in NAV_PAGES:
+    active_class = "active" if st.session_state.current_page == p else ""
+    nav_items_html += f'<div class="sidebar-nav-item {active_class}" data-page="{p}">{p}</div>'
 
-def toggle_sidebar():
-    st.session_state.sidebar_open = not st.session_state.sidebar_open
+model_status = "✅ النموذج جاهز" if model else "❌ النموذج غير متاح"
+model_color = "#00e676" if model else "#ff1744"
+exam_count = len(st.session_state.patient_history)
 
-def close_sidebar():
-    st.session_state.sidebar_open = False
-
-def navigate_to(page_name):
-    st.session_state.current_page = page_name
-    st.session_state.sidebar_open = False
-
-# Render custom sidebar HTML
-def render_custom_sidebar():
-    is_open = st.session_state.sidebar_open
-    open_class = "open" if is_open else ""
+# Full HTML/CSS/JS component for floating sidebar
+floating_sidebar_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{ font-family: 'Cairo', 'Segoe UI', sans-serif; direction: rtl; }}
     
-    # Build nav items HTML
-    nav_items_html = ""
-    for p in NAV_PAGES:
-        active_class = "active" if st.session_state.current_page == p else ""
-        nav_items_html += f'<div class="sidebar-nav-item {active_class}" data-page="{p}">{p}</div>'
+    .floating-heart-btn {{
+        position: fixed;
+        bottom: 80px;
+        right: 25px;
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff1744 0%, #d32f2f 100%);
+        border: none;
+        cursor: pointer;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 25px rgba(255, 23, 68, 0.5);
+        animation: heartPulse 1.5s ease-in-out infinite, floatAround 6s ease-in-out infinite;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }}
+    .floating-heart-btn:hover {{
+        transform: scale(1.15);
+        box-shadow: 0 10px 40px rgba(255, 23, 68, 0.7);
+        animation-play-state: paused;
+    }}
+    .floating-heart-btn span {{ font-size: 2rem; }}
     
-    model_status = "✅ النموذج جاهز" if model else "❌ النموذج غير متاح"
-    model_color = "#00e676" if model else "#ff1744"
+    @keyframes heartPulse {{
+        0%, 100% {{ transform: scale(1); }}
+        50% {{ transform: scale(1.1); }}
+    }}
     
-    sidebar_html = f"""
-    <div class="custom-sidebar-overlay {open_class}" onclick="closeSidebar()"></div>
-    <div class="custom-sidebar-panel {open_class}">
+    @keyframes floatAround {{
+        0%, 100% {{ bottom: 80px; right: 25px; }}
+        25% {{ bottom: 100px; right: 30px; }}
+        50% {{ bottom: 90px; right: 20px; }}
+        75% {{ bottom: 85px; right: 35px; }}
+    }}
+
+    .custom-sidebar-overlay {{
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+    }}
+    .custom-sidebar-overlay.open {{
+        opacity: 1;
+        visibility: visible;
+    }}
+    
+    .custom-sidebar-panel {{
+        position: fixed;
+        top: 0;
+        right: -350px;
+        width: 320px;
+        height: 100vh;
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        z-index: 10001;
+        padding: 25px;
+        overflow-y: auto;
+        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    .custom-sidebar-panel.open {{
+        right: 0;
+    }}
+    
+    .sidebar-close-btn {{
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #ff1744;
+        transition: all 0.3s;
+    }}
+    .sidebar-close-btn:hover {{
+        background: rgba(255, 23, 68, 0.2);
+        transform: rotate(90deg);
+    }}
+    
+    .sidebar-title {{
+        text-align: center;
+        margin-top: 50px;
+        margin-bottom: 20px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #f8fafc;
+    }}
+    
+    .sidebar-nav-item {{
+        display: block;
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #f8fafc;
+        text-decoration: none;
+        font-size: 1.05rem;
+        font-weight: 500;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+        cursor: pointer;
+    }}
+    .sidebar-nav-item:hover {{
+        background: rgba(0, 230, 118, 0.15);
+        border-color: #00e676;
+        transform: translateX(-5px);
+    }}
+    .sidebar-nav-item.active {{
+        background: linear-gradient(90deg, rgba(0, 230, 118, 0.2), transparent);
+        border-right: 3px solid #00e676;
+    }}
+    
+    .sidebar-footer {{
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }}
+    
+    hr {{
+        border: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        margin: 20px 0;
+    }}
+</style>
+</head>
+<body>
+    <button class="floating-heart-btn" id="openBtn" onclick="openSidebar()">
+        <span>🫀</span>
+    </button>
+    
+    <div class="custom-sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="custom-sidebar-panel" id="panel">
         <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
         <div class="sidebar-title">🫀 دكتور القلب الذكي</div>
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <hr>
         {nav_items_html}
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
-            📊 الفحوصات: {len(st.session_state.patient_history)}
+        <hr>
+        <div style="text-align: center; color: #94a3b8; font-size: 0.9rem;">
+            📊 الفحوصات: {exam_count}
         </div>
         <div style="text-align: center; margin-top: 10px; color: {model_color}; font-weight: 600;">
             {model_status}
@@ -529,68 +669,45 @@ def render_custom_sidebar():
             نظام ذكاء اصطناعي للكشف عن أمراض القلب
         </div>
     </div>
-    """
-    st.markdown(sidebar_html, unsafe_allow_html=True)
 
-# Render floating heart button (only when sidebar is closed)
-def render_floating_button():
-    if not st.session_state.sidebar_open:
-        st.markdown("""
-        <button class="floating-heart-btn" onclick="openSidebar()">
-            <span>🫀</span>
-        </button>
-        """, unsafe_allow_html=True)
+    <script>
+        function openSidebar() {{
+            document.getElementById('overlay').classList.add('open');
+            document.getElementById('panel').classList.add('open');
+            document.getElementById('openBtn').style.display = 'none';
+        }}
 
-# JavaScript for sidebar control
-st.markdown("""
-<script>
-function openSidebar() {
-    // Use Streamlit's setComponentValue or a hidden element trick
-    // For simplicity, we'll use a form submission approach
-    const overlay = document.querySelector('.custom-sidebar-overlay');
-    const panel = document.querySelector('.custom-sidebar-panel');
-    const btn = document.querySelector('.floating-heart-btn');
-    if (overlay) overlay.classList.add('open');
-    if (panel) panel.classList.add('open');
-    if (btn) btn.style.display = 'none';
-}
+        function closeSidebar() {{
+            document.getElementById('overlay').classList.remove('open');
+            document.getElementById('panel').classList.remove('open');
+            document.getElementById('openBtn').style.display = 'flex';
+        }}
 
-function closeSidebar() {
-    const overlay = document.querySelector('.custom-sidebar-overlay');
-    const panel = document.querySelector('.custom-sidebar-panel');
-    const btn = document.querySelector('.floating-heart-btn');
-    if (overlay) overlay.classList.remove('open');
-    if (panel) panel.classList.remove('open');
-    if (btn) btn.style.display = 'flex';
-}
+        // Navigation click handler
+        document.querySelectorAll('.sidebar-nav-item').forEach(item => {{
+            item.addEventListener('click', function() {{
+                const page = this.getAttribute('data-page');
+                // Send message to parent Streamlit
+                window.parent.postMessage({{type: 'streamlit:setComponentValue', value: page}}, '*');
+                closeSidebar();
+            }});
+        }});
+    </script>
+</body>
+</html>
+"""
 
-// Add click handlers to nav items
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('sidebar-nav-item')) {
-        const page = e.target.getAttribute('data-page');
-        // Store in sessionStorage and reload to trigger Streamlit update
-        sessionStorage.setItem('selected_page', page);
-        // We need a way to communicate back to Streamlit
-        // For now, close the sidebar visually
-        closeSidebar();
-    }
-});
-</script>
-""", unsafe_allow_html=True)
+# Render the floating sidebar component
+components.html(floating_sidebar_html, height=0, scrolling=False)
 
-# Render sidebar components
-render_custom_sidebar()
-render_floating_button()
-
-# Add Streamlit buttons for actual navigation (hidden visually but functional)
-# We use columns with very small width to hide them
-with st.container():
-    nav_cols = st.columns([1, 1, 1, 1, 1])
-    for i, page_name in enumerate(NAV_PAGES):
-        with nav_cols[i]:
-            if st.button(page_name, key=f"nav_{i}", use_container_width=True):
-                st.session_state.current_page = page_name
-                st.rerun()
+# Add Streamlit buttons for actual navigation (visible as a nav bar)
+st.markdown("---")
+nav_cols = st.columns(5)
+for i, page_name in enumerate(NAV_PAGES):
+    with nav_cols[i]:
+        if st.button(page_name, key=f"nav_{i}", use_container_width=True):
+            st.session_state.current_page = page_name
+            st.rerun()
 
 # ==========================================
 # 6. LANDING PAGE
@@ -1045,7 +1162,7 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
         
         st.markdown("---")
         
-        # === NEW: Complete Patient Data Table ===
+        # === Complete Patient Data Table - STYLED HTML ===
         st.markdown("### 📊 جدول البيانات الكامل")
         st.caption("جميع القيم التي أدخلتها مع تفسيرها الطبي")
         
@@ -1065,11 +1182,47 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
             ("🩺", "الثلاسيميا", ["غير محدد", "ثابت", "طبيعي", "قابل للإصلاح"][fd['thal']], "", "فحص تصويري"),
         ]
         
-        for item_icon, item_name, item_val, item_unit, item_info in full_data_items:
-            dc1, dc2, dc3 = st.columns([3, 2, 4])
-            with dc1: st.markdown(f"**{item_icon} {item_name}**")
-            with dc2: st.markdown(f"`{item_val}{(' ' + item_unit) if item_unit else ''}`")
-            with dc3: st.caption(item_info)
+        # Build HTML table
+        table_rows = ""
+        for i, (item_icon, item_name, item_val, item_unit, item_info) in enumerate(full_data_items):
+            row_bg = "rgba(0, 230, 118, 0.05)" if i % 2 == 0 else "rgba(41, 121, 255, 0.05)"
+            value_display = f"{item_val} {item_unit}".strip()
+            table_rows += f"""
+            <tr style="background: {row_bg};">
+                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size: 1.2rem;">{item_icon}</span>
+                </td>
+                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; color: #f8fafc;">
+                    {item_name}
+                </td>
+                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <span style="background: linear-gradient(90deg, #2979ff, #6366f1); padding: 5px 12px; border-radius: 8px; color: white; font-weight: 600;">
+                        {value_display}
+                    </span>
+                </td>
+                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #94a3b8; font-size: 0.9rem;">
+                    {item_info}
+                </td>
+            </tr>
+            """
+        
+        st.markdown(f"""
+        <div style="overflow-x: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse; direction: rtl;">
+                <thead>
+                    <tr style="background: linear-gradient(90deg, #1e293b, #0f172a);">
+                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;"></th>
+                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">المؤشر</th>
+                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">القيمة</th>
+                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">الوصف</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {table_rows}
+                </tbody>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
