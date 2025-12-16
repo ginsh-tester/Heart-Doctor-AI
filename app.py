@@ -391,15 +391,27 @@ st.markdown("""
         color: white !important;
     }
     
-    /* SLIDER RTL FIX - Sync thumb with track */
-    .stSlider [data-baseweb="slider"] {
+    /* SLIDER RTL FIX - Comprehensive fix for thumb sync */
+    .stSlider,
+    .stSlider > div,
+    .stSlider > div > div,
+    .stSlider > div > div > div,
+    .stSlider [data-baseweb="slider"],
+    .stSlider [data-baseweb="slider"] > div,
+    .stSlider [role="slider"],
+    div[data-testid="stSlider"],
+    div[data-testid="stSlider"] > div {
+        direction: ltr !important;
+        unicode-bidi: bidi-override !important;
+    }
+    
+    /* Slider track and thumb styling */
+    .stSlider [data-baseweb="slider"] [role="slider"] {
         direction: ltr !important;
     }
-    .stSlider > div > div > div {
-        direction: ltr !important;
-    }
-    .stSlider [role="slider"] {
-        direction: ltr !important;
+    
+    .stSlider [data-baseweb="slider"] div[role="slider"] {
+        transform: translateX(-50%) !important;
     }
 
     /* ENCYCLOPEDIA CARDS */
@@ -644,17 +656,30 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
     st.markdown("<h1 class='gradient-text' style='text-align:center;font-size:2.5rem;'>🩺 غرفة الكشف الذكية</h1>", unsafe_allow_html=True)
     show_model_info()
     
-    # Progress
+    # Progress Steps - Fixed Centering
     steps = ["البيانات الشخصية", "العلامات الحيوية", "فحص القلب", "النتيجة"]
     prog_cols = st.columns(4)
     for i, col in enumerate(prog_cols):
         with col:
             done = i + 1 <= st.session_state.step
             color = "#00e676" if done else "#334155"
+            text_color = "#fff" if done else "#666"
             st.markdown(f"""
-            <div style='text-align:center;'>
-                <div style='width:40px;height:40px;border-radius:50%;background:{color};margin:0 auto;line-height:40px;font-weight:900;color:#0a0f1a;'>{i+1}</div>
-                <small style='color:{"#fff" if done else "#666"};'>{steps[i]}</small>
+            <div style='display:flex; flex-direction:column; align-items:center; text-align:center;'>
+                <div style='
+                    width:45px;
+                    height:45px;
+                    border-radius:50%;
+                    background:{color};
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-weight:900;
+                    font-size:1.2rem;
+                    color:#0a0f1a;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                '>{i+1}</div>
+                <div style='margin-top:8px; font-size:0.85rem; color:{text_color}; font-weight:500;'>{steps[i]}</div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -859,22 +884,66 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
         
         with viz2:
             st.markdown("### 🧬 تحليل العوامل (SHAP)")
+            st.caption("هذا التحليل يوضح مدى تأثير كل مؤشر على قرار النموذج")
             try:
                 estimator = model.steps[-1][1] if hasattr(model, 'steps') else model
                 explainer = shap.TreeExplainer(estimator)
                 sv = np.array(explainer.shap_values(input_scaled)).flatten()
                 
-                names = ['العمر','الجنس','ألم الصدر','الضغط','الكوليسترول','السكر','ECG','النبض','ذبحة','ST','الميل','الشرايين','ثلاسيميا']
-                shap_df = pd.DataFrame({'feature': names, 'importance': sv[:len(names)]}).sort_values(by='importance', key=abs, ascending=True).tail(8)
+                # All 13 feature names with Arabic labels
+                feature_names = [
+                    'العمر', 'الجنس', 'ألم الصدر', 'ضغط الدم', 'الكوليسترول',
+                    'سكر الدم', 'تخطيط ECG', 'أقصى نبض', 'ألم المجهود',
+                    'انخفاض ST', 'ميل الموجة', 'الشرايين', 'الثلاسيميا'
+                ]
                 
+                # Create dataframe with all 13 features
+                shap_df = pd.DataFrame({
+                    'feature': feature_names,
+                    'importance': sv[:len(feature_names)]
+                }).sort_values(by='importance', key=abs, ascending=True)
+                
+                # Color coding: Red = increases risk, Green = decreases risk
                 colors = ['#ff1744' if x > 0 else '#00e676' for x in shap_df['importance']]
-                fig_shap = go.Figure(go.Bar(x=shap_df['importance'], y=shap_df['feature'], orientation='h',
-                                           marker_color=colors, texttemplate='%{x:.2f}', textposition='outside'))
-                fig_shap.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"),
-                                       xaxis_title="التأثير (+ خطر / - أمان)", margin=dict(l=20, r=40, t=30, b=20))
+                
+                fig_shap = go.Figure(go.Bar(
+                    x=shap_df['importance'], 
+                    y=shap_df['feature'], 
+                    orientation='h',
+                    marker_color=colors, 
+                    texttemplate='%{x:.3f}', 
+                    textposition='outside',
+                    textfont=dict(size=11)
+                ))
+                fig_shap.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    font=dict(color="white", family="Cairo"),
+                    xaxis_title="التأثير على احتمالية المرض",
+                    yaxis_title="",
+                    margin=dict(l=20, r=60, t=30, b=50),
+                    height=450,
+                    xaxis=dict(zeroline=True, zerolinecolor='rgba(255,255,255,0.3)', zerolinewidth=2)
+                )
                 st.plotly_chart(fig_shap, use_container_width=True)
+                
+                # Legend explanation
+                st.markdown("""
+                <div style='display:flex; justify-content:center; gap:30px; margin-top:10px;'>
+                    <span style='color:#ff1744;'>🔴 يزيد خطر المرض</span>
+                    <span style='color:#00e676;'>🟢 يقلل خطر المرض</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
             except Exception as e:
                 st.warning(f"تعذر حساب SHAP: {e}")
+                # Fallback: show a simple feature importance based on medical knowledge
+                st.info("سنعرض تحليل مبسط بناءً على المعرفة الطبية:")
+                fallback_data = {
+                    'المؤشر': ['الشرايين المسدودة', 'ألم الصدر النمطي', 'انخفاض ST', 'العمر', 'الضغط', 'الكوليسترول'],
+                    'مستوى الخطر': ['مرتفع جداً', 'مرتفع', 'مرتفع', 'متوسط', 'متوسط', 'متوسط']
+                }
+                st.dataframe(pd.DataFrame(fallback_data), use_container_width=True, hide_index=True)
         
         st.markdown("---")
         
