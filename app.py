@@ -488,237 +488,40 @@ if 'sidebar_open' not in st.session_state:
     st.session_state.sidebar_open = False
 
 # ==========================================
-# 5. CUSTOM FLOATING SIDEBAR SYSTEM
+# 5. SIMPLE NAVIGATION BAR
 # ==========================================
-import streamlit.components.v1 as components
 
 # Navigation pages list
 NAV_PAGES = ["🏠 الرئيسية", "🩺 غرفة الكشف", "📊 لوحة القيادة", "📋 السجلات", "📚 الموسوعة"]
 
-# Build nav items HTML
-nav_items_html = ""
-for p in NAV_PAGES:
-    active_class = "active" if st.session_state.current_page == p else ""
-    nav_items_html += f'<div class="sidebar-nav-item {active_class}" data-page="{p}">{p}</div>'
+# Model status display
+model_status_text = "✅ النموذج جاهز" if model else "❌ غير متاح"
 
-model_status = "✅ النموذج جاهز" if model else "❌ النموذج غير متاح"
-model_color = "#00e676" if model else "#ff1744"
-exam_count = len(st.session_state.patient_history)
+# Create a nice navigation header
+st.markdown(f"""
+<div style="text-align: center; padding: 15px 0; margin-bottom: 20px; background: linear-gradient(90deg, rgba(0,230,118,0.1), rgba(41,121,255,0.1)); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+    <span style="font-size: 1.5rem;">🫀</span>
+    <span style="font-size: 1.2rem; font-weight: 700; margin: 0 15px; color: #f8fafc;">دكتور القلب الذكي</span>
+    <span style="font-size: 0.85rem; color: #94a3b8;">{model_status_text}</span>
+</div>
+""", unsafe_allow_html=True)
 
-# Full HTML/CSS/JS component for floating sidebar
-floating_sidebar_html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{ font-family: 'Cairo', 'Segoe UI', sans-serif; direction: rtl; }}
-    
-    .floating-heart-btn {{
-        position: fixed;
-        bottom: 80px;
-        right: 25px;
-        width: 65px;
-        height: 65px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #ff1744 0%, #d32f2f 100%);
-        border: none;
-        cursor: pointer;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 6px 25px rgba(255, 23, 68, 0.5);
-        animation: heartPulse 1.5s ease-in-out infinite, floatAround 6s ease-in-out infinite;
-        transition: transform 0.3s, box-shadow 0.3s;
-    }}
-    .floating-heart-btn:hover {{
-        transform: scale(1.15);
-        box-shadow: 0 10px 40px rgba(255, 23, 68, 0.7);
-        animation-play-state: paused;
-    }}
-    .floating-heart-btn span {{ font-size: 2rem; }}
-    
-    @keyframes heartPulse {{
-        0%, 100% {{ transform: scale(1); }}
-        50% {{ transform: scale(1.1); }}
-    }}
-    
-    @keyframes floatAround {{
-        0%, 100% {{ bottom: 80px; right: 25px; }}
-        25% {{ bottom: 100px; right: 30px; }}
-        50% {{ bottom: 90px; right: 20px; }}
-        75% {{ bottom: 85px; right: 35px; }}
-    }}
-
-    .custom-sidebar-overlay {{
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 10000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s, visibility 0.3s;
-    }}
-    .custom-sidebar-overlay.open {{
-        opacity: 1;
-        visibility: visible;
-    }}
-    
-    .custom-sidebar-panel {{
-        position: fixed;
-        top: 0;
-        right: -350px;
-        width: 320px;
-        height: 100vh;
-        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-        z-index: 10001;
-        padding: 25px;
-        overflow-y: auto;
-        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
-    }}
-    .custom-sidebar-panel.open {{
-        right: 0;
-    }}
-    
-    .sidebar-close-btn {{
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: #ff1744;
-        transition: all 0.3s;
-    }}
-    .sidebar-close-btn:hover {{
-        background: rgba(255, 23, 68, 0.2);
-        transform: rotate(90deg);
-    }}
-    
-    .sidebar-title {{
-        text-align: center;
-        margin-top: 50px;
-        margin-bottom: 20px;
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #f8fafc;
-    }}
-    
-    .sidebar-nav-item {{
-        display: block;
-        padding: 15px 20px;
-        margin-bottom: 10px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #f8fafc;
-        text-decoration: none;
-        font-size: 1.05rem;
-        font-weight: 500;
-        transition: all 0.3s;
-        border: 1px solid transparent;
-        cursor: pointer;
-    }}
-    .sidebar-nav-item:hover {{
-        background: rgba(0, 230, 118, 0.15);
-        border-color: #00e676;
-        transform: translateX(-5px);
-    }}
-    .sidebar-nav-item.active {{
-        background: linear-gradient(90deg, rgba(0, 230, 118, 0.2), transparent);
-        border-right: 3px solid #00e676;
-    }}
-    
-    .sidebar-footer {{
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        right: 20px;
-        padding: 15px;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        text-align: center;
-        font-size: 0.85rem;
-        color: #94a3b8;
-    }}
-    
-    hr {{
-        border: none;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        margin: 20px 0;
-    }}
-</style>
-</head>
-<body>
-    <button class="floating-heart-btn" id="openBtn" onclick="openSidebar()">
-        <span>🫀</span>
-    </button>
-    
-    <div class="custom-sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
-    <div class="custom-sidebar-panel" id="panel">
-        <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
-        <div class="sidebar-title">🫀 دكتور القلب الذكي</div>
-        <hr>
-        {nav_items_html}
-        <hr>
-        <div style="text-align: center; color: #94a3b8; font-size: 0.9rem;">
-            📊 الفحوصات: {exam_count}
-        </div>
-        <div style="text-align: center; margin-top: 10px; color: {model_color}; font-weight: 600;">
-            {model_status}
-        </div>
-        <div class="sidebar-footer">
-            نظام ذكاء اصطناعي للكشف عن أمراض القلب
-        </div>
-    </div>
-
-    <script>
-        function openSidebar() {{
-            document.getElementById('overlay').classList.add('open');
-            document.getElementById('panel').classList.add('open');
-            document.getElementById('openBtn').style.display = 'none';
-        }}
-
-        function closeSidebar() {{
-            document.getElementById('overlay').classList.remove('open');
-            document.getElementById('panel').classList.remove('open');
-            document.getElementById('openBtn').style.display = 'flex';
-        }}
-
-        // Navigation click handler
-        document.querySelectorAll('.sidebar-nav-item').forEach(item => {{
-            item.addEventListener('click', function() {{
-                const page = this.getAttribute('data-page');
-                // Send message to parent Streamlit
-                window.parent.postMessage({{type: 'streamlit:setComponentValue', value: page}}, '*');
-                closeSidebar();
-            }});
-        }});
-    </script>
-</body>
-</html>
-"""
-
-# Render the floating sidebar component
-components.html(floating_sidebar_html, height=700, scrolling=False)
-
-# Add Streamlit buttons for actual navigation (visible as a nav bar)
-st.markdown("---")
+# Navigation buttons row
 nav_cols = st.columns(5)
 for i, page_name in enumerate(NAV_PAGES):
     with nav_cols[i]:
-        if st.button(page_name, key=f"nav_{i}", use_container_width=True):
+        # Highlight active page
+        is_active = st.session_state.current_page == page_name
+        if st.button(
+            page_name, 
+            key=f"nav_{i}", 
+            use_container_width=True,
+            type="primary" if is_active else "secondary"
+        ):
             st.session_state.current_page = page_name
             st.rerun()
+
+st.markdown("---")
 
 # ==========================================
 # 6. LANDING PAGE
@@ -1173,67 +976,52 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
         
         st.markdown("---")
         
-        # === Complete Patient Data Table - STYLED HTML ===
+        # === Complete Patient Data Table ===
         st.markdown("### 📊 جدول البيانات الكامل")
         st.caption("جميع القيم التي أدخلتها مع تفسيرها الطبي")
         
-        full_data_items = [
-            ("👤", "العمر", fd['age'], "سنة", "عامل خطر يزيد مع التقدم"),
-            ("🚻", "الجنس", fd['sex'], "", "الذكور أعلى خطراً عادةً"),
-            ("💔", "نوع ألم الصدر", ["مفيش ألم", "ذبحة نمطية", "ذبحة غير نمطية", "ألم غير قلبي"][fd['cp']], "", "الذبحة النمطية مؤشر قوي"),
-            ("🩸", "ضغط الدم (راحة)", fd['trestbps'], "mmHg", "الطبيعي &lt; 120"),
-            ("🧪", "الكوليسترول", fd['chol'], "mg/dL", "الطبيعي &lt; 200"),
-            ("🍬", "سكر الدم صائم", fd['fbs'], "", "&gt; 120 = مرتفع"),
-            ("📈", "تخطيط القلب ECG", ["طبيعي", "شذوذ ST-T", "تضخم بطين أيسر"][fd['restecg']], "", "تخطيط كهربائي"),
-            ("💓", "أقصى نبض (مجهود)", fd['thalach'], "bpm", "المتوقع: 220 - العمر"),
-            ("🏃", "ألم مع المجهود", fd['exang'], "", "نعم = علامة خطر"),
-            ("📉", "انخفاض ST", fd['oldpeak'], "mm", "&gt; 2 = نقص تروية"),
-            ("📐", "ميل الموجة", ["صاعد", "مسطح", "هابط"][fd['slope']], "", "الهابط أخطر"),
-            ("🫀", "الشرايين الملونة", fd['ca'], "شريان", "0 = طبيعي"),
-            ("🩺", "الثلاسيميا", ["غير محدد", "ثابت", "طبيعي", "قابل للإصلاح"][fd['thal']], "", "فحص تصويري"),
-        ]
+        # Create DataFrame for the table
+        table_data = {
+            "الأيقونة": ["👤", "🚻", "💔", "🩸", "🧪", "🍬", "📈", "💓", "🏃", "📉", "📐", "🫀", "🩺"],
+            "المؤشر": [
+                "العمر", "الجنس", "نوع ألم الصدر", "ضغط الدم", "الكوليسترول",
+                "سكر الدم صائم", "تخطيط القلب", "أقصى نبض", "ألم مع المجهود",
+                "انخفاض ST", "ميل الموجة", "الشرايين الملونة", "الثلاسيميا"
+            ],
+            "القيمة": [
+                f"{fd['age']} سنة",
+                fd['sex'],
+                ["مفيش ألم", "ذبحة نمطية", "ذبحة غير نمطية", "ألم غير قلبي"][fd['cp']],
+                f"{fd['trestbps']} mmHg",
+                f"{fd['chol']} mg/dL",
+                fd['fbs'],
+                ["طبيعي", "شذوذ ST-T", "تضخم بطين أيسر"][fd['restecg']],
+                f"{fd['thalach']} bpm",
+                fd['exang'],
+                f"{fd['oldpeak']} mm",
+                ["صاعد", "مسطح", "هابط"][fd['slope']],
+                f"{fd['ca']} شريان",
+                ["غير محدد", "ثابت", "طبيعي", "قابل للإصلاح"][fd['thal']]
+            ],
+            "ملاحظة": [
+                "عامل خطر يزيد مع التقدم",
+                "الذكور أعلى خطراً",
+                "الذبحة النمطية مؤشر قوي",
+                "الطبيعي أقل من 120",
+                "الطبيعي أقل من 200",
+                "أكثر من 120 = مرتفع",
+                "تخطيط كهربائي",
+                "المتوقع: 220 - العمر",
+                "نعم = علامة خطر",
+                "أكثر من 2 = نقص تروية",
+                "الهابط أخطر",
+                "0 = طبيعي",
+                "فحص تصويري"
+            ]
+        }
         
-        # Build HTML table
-        table_rows = ""
-        for i, (item_icon, item_name, item_val, item_unit, item_info) in enumerate(full_data_items):
-            row_bg = "rgba(0, 230, 118, 0.05)" if i % 2 == 0 else "rgba(41, 121, 255, 0.05)"
-            value_display = f"{item_val} {item_unit}".strip()
-            table_rows += f"""
-            <tr style="background: {row_bg};">
-                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 1.2rem;">{item_icon}</span>
-                </td>
-                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; color: #f8fafc;">
-                    {item_name}
-                </td>
-                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span style="background: linear-gradient(90deg, #2979ff, #6366f1); padding: 5px 12px; border-radius: 8px; color: white; font-weight: 600;">
-                        {value_display}
-                    </span>
-                </td>
-                <td style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #94a3b8; font-size: 0.9rem;">
-                    {item_info}
-                </td>
-            </tr>
-            """
-        
-        st.markdown(f"""
-        <div style="overflow-x: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-            <table style="width: 100%; border-collapse: collapse; direction: rtl;">
-                <thead>
-                    <tr style="background: linear-gradient(90deg, #1e293b, #0f172a);">
-                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;"></th>
-                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">المؤشر</th>
-                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">القيمة</th>
-                        <th style="padding: 15px; text-align: right; color: #00e676; font-weight: 700; border-bottom: 2px solid #00e676;">الوصف</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {table_rows}
-                </tbody>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
+        df_table = pd.DataFrame(table_data)
+        st.dataframe(df_table, use_container_width=True, hide_index=True)
         
         st.markdown("---")
         
