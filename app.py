@@ -42,16 +42,23 @@ st.markdown("""
         --text-muted: #94a3b8;
     }
 
-    /* FORCE DARK THEME IGNORES STREAMLIT LIGHT MODE */
-    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        font-family: 'Cairo', 'Outfit', sans-serif;
-        direction: rtl;
-        background-color: var(--dark-bg);
-        color: var(--text-main);
+    /* RTL ARABIC SUPPORT - STRONGER SELECTORS */
+    html {
+        direction: rtl !important;
     }
     
-    /* Override Streamlit defaults for text colors */
-    h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, .stText {
+    body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"], .stApp, .main, .block-container {
+        font-family: 'Cairo', sans-serif !important;
+        direction: rtl !important;
+        text-align: right !important;
+        background-color: var(--dark-bg) !important;
+        color: var(--text-main) !important;
+    }
+    
+    /* All text elements RTL */
+    h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown, .stText {
+        direction: rtl !important;
+        text-align: right !important;
         color: var(--text-main) !important;
     }
 
@@ -237,37 +244,46 @@ st.markdown("""
         color: var(--text-muted);
     }
     
-    /* GLASSMORPHISM CARDS */
+    /* 3D GLASSMORPHISM CARDS */
     .glass-card {
         background: var(--card-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 20px;
-        padding: 30px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 
+            0 10px 40px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform-style: preserve-3d;
+        perspective: 1000px;
         position: relative;
         overflow: hidden;
     }
 
     .glass-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-12px) rotateX(5deg) rotateY(-3deg) scale(1.02);
+        box-shadow: 
+            0 30px 60px rgba(0, 0, 0, 0.4),
+            0 0 40px rgba(0, 230, 118, 0.15),
+            0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+        border-color: var(--primary);
     }
     
-    .glass-card::after {
+    .glass-card::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0; height: 2px;
-        background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+        border-radius: 20px;
         opacity: 0;
-        transition: opacity 0.3s;
+        transition: opacity 0.4s;
+        pointer-events: none;
     }
     
-    .glass-card:hover::after { opacity: 1; }
+    .glass-card:hover::before { opacity: 1; }
 
     /* HERO SECTION */
     .hero-section {
