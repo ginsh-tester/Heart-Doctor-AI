@@ -1170,28 +1170,14 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
 
         for ind, val, note, status in indicators:
             note_class = f"note-{status}"
-            table_rows_html += f"""
-            <tr>
-                <td>{ind}</td>
-                <td><span class="premium-value-badge">{val}</span></td>
-                <td><span class="premium-note {note_class}">{note}</span></td>
-            </tr>
-            """
+            table_rows_html += f"<tr><td>{ind}</td><td><span class='premium-value-badge'>{val}</span></td><td><span class='premium-note {note_class}'>{note}</span></td></tr>"
 
         st.markdown(f"""
-        <table class="premium-table">
-            <thead>
-                <tr>
-                    <th width="30%">المؤشر</th>
-                    <th width="25%">القيمة</th>
-                    <th width="45%">النصيحة / الملاحظة</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows_html}
-            </tbody>
-        </table>
-        """, unsafe_allow_html=True)
+<table class="premium-table">
+<thead><tr><th>المؤشر</th><th>القيمة</th><th>النصيحة / الملاحظة</th></tr></thead>
+<tbody>{table_rows_html}</tbody>
+</table>
+""", unsafe_allow_html=True)
         
         st.markdown("---")
         
