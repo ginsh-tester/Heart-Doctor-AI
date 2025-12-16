@@ -721,7 +721,7 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
         st.markdown("---")
         c1, c2 = st.columns(2)
         with c1:
-            fd['age'] = st.slider("العمر (سنة)", 20, 90, fd['age'])
+            fd['age'] = st.number_input("العمر (سنة)", 20, 90, fd['age'])
             fd['sex'] = st.radio("الجنس", ["ذكر", "أنثى"], horizontal=True, index=0 if fd['sex'] == 'ذكر' else 1)
         with c2:
             if anim_doctor:
@@ -764,12 +764,14 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
             cp_opts = ["مفيش ألم (0)", "ذبحة نمطية (1)", "ذبحة غير نمطية (2)", "ألم غير قلبي (3)"]
             cp = st.selectbox("نوع ألم الصدر", cp_opts, index=fd['cp'])
             fd['cp'] = cp_opts.index(cp)
-            fd['thalach'] = st.slider("أقصى معدل نبض", 60, 220, fd['thalach'])
+            fd['thalach'] = st.number_input("أقصى معدل نبض", 60, 220, fd['thalach'])
             fd['exang'] = st.radio("ألم مع المجهود؟", ["لا", "نعم"], horizontal=True, index=0 if fd['exang'] == 'لا' else 1)
         with c2:
             fd['oldpeak'] = st.number_input("انخفاض ST", 0.0, 10.0, fd['oldpeak'], step=0.1)
-            fd['slope'] = st.select_slider("ميل الموجة", [0, 1, 2], fd['slope'], format_func=lambda x: ["صاعد","مسطح","هابط"][x])
-            fd['ca'] = st.slider("الشرايين الملونة", 0, 3, fd['ca'])
+            slope_opts = ["صاعد (0)", "مسطح (1)", "هابط (2)"]
+            slope_val = st.selectbox("ميل الموجة", slope_opts, index=fd['slope'])
+            fd['slope'] = slope_opts.index(slope_val)
+            fd['ca'] = st.number_input("الشرايين الملونة", 0, 3, fd['ca'])
             thal_opts = ["0", "1 (ثابت)", "2 (طبيعي)", "3 (قابل للإصلاح)"]
             thal = st.selectbox("الثلاسيميا", thal_opts, index=fd['thal'] if isinstance(fd['thal'], int) else 2)
             fd['thal'] = thal_opts.index(thal) if isinstance(thal, str) else fd['thal']
@@ -1086,47 +1088,110 @@ elif st.session_state.current_page == "🩺 غرفة الكشف":
         st.markdown("### 📊 جدول البيانات الكامل")
         st.caption("جميع القيم التي أدخلتها مع تفسيرها الطبي")
         
-        # Create DataFrame for the table
-        table_data = {
-            "المؤشر": [
-                "العمر", "الجنس", "نوع ألم الصدر", "ضغط الدم", "الكوليسترول",
-                "سكر الدم صائم", "تخطيط القلب", "أقصى نبض", "ألم مع المجهود",
-                "انخفاض ST", "ميل الموجة", "الشرايين الملونة", "الثلاسيميا"
-            ],
-            "القيمة": [
-                f"{fd['age']} سنة",
-                fd['sex'],
-                ["مفيش ألم", "ذبحة نمطية", "ذبحة غير نمطية", "ألم غير قلبي"][fd['cp']],
-                f"{fd['trestbps']} mmHg",
-                f"{fd['chol']} mg/dL",
-                fd['fbs'],
-                ["طبيعي", "شذوذ ST-T", "تضخم بطين أيسر"][fd['restecg']],
-                f"{fd['thalach']} bpm",
-                fd['exang'],
-                f"{fd['oldpeak']} mm",
-                ["صاعد", "مسطح", "هابط"][fd['slope']],
-                f"{fd['ca']} شريان",
-                ["غير محدد", "ثابت", "طبيعي", "قابل للإصلاح"][fd['thal']]
-            ],
-            "النصيحة / الملاحظة": [
-                "عامل خطر يزيد مع التقدم",
-                "الذكور أعلى خطراً (احذر)",
-                "الذبحة النمطية مؤشر قوي",
-                "الطبيعي أقل من 120 (تابع باستمرار)",
-                "الطبيعي أقل من 200 (قلل الدهون)",
-                "أكثر من 120 = مرتفع (قلل السكر)",
-                "تخطيط كهربائي (افحص دورياً)",
-                "المتوقع: 220 - العمر",
-                "نعم = علامة خطر (توقف عن الجهد)",
-                "أكثر من 2 = نقص تروية (خطر)",
-                "الهابط أخطر (استشر طبيب)",
-                "0 = طبيعي (حافظ على صحتك)",
-                "فحص تصويري (تحليل جيني)"
-            ]
+        # === Premium Styled HTML Table ===
+        st.markdown("""
+        <style>
+        .premium-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            direction: rtl;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
         }
+        .premium-table thead tr {
+            background: linear-gradient(90deg, #1e293b, #0f172a);
+        }
+        .premium-table th {
+            color: #00e676;
+            font-weight: 700;
+            padding: 18px;
+            text-align: right;
+            border-bottom: 2px solid rgba(0, 230, 118, 0.3);
+            font-size: 1.1rem;
+        }
+        .premium-table tbody tr {
+            background: rgba(30, 41, 59, 0.4);
+            transition: all 0.3s;
+        }
+        .premium-table tbody tr:hover {
+            background: rgba(0, 230, 118, 0.05);
+            transform: scale(1.01);
+        }
+        .premium-table td {
+            padding: 15px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #e2e8f0;
+            font-size: 1rem;
+        }
+        .premium-table td:first-child {
+            font-weight: 600;
+            color: #fff;
+        }
+        .premium-value-badge {
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: #4ade80;
+        }
+        .premium-note {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        .note-high-risk { color: #ff1744; font-weight: 600; }
+        .note-normal { color: #00e676; }
+        .note-warning { color: #ff9100; }
+        </style>
+        """, unsafe_allow_html=True)
+
+        table_rows_html = ""
         
-        df_table = pd.DataFrame(table_data)
-        st.dataframe(df_table, use_container_width=True, hide_index=True)
+        # Prepare data for loop
+        indicators = [
+            ("العمر", f"{fd['age']} سنة", "عامل خطر يزيد مع التقدم", "normal"),
+            ("الجنس", fd['sex'], "الذكور أعلى خطراً (احذر)", "warning" if fd['sex'] == 'ذكر' else "normal"),
+            ("نوع ألم الصدر", ["مفيش ألم", "ذبحة نمطية", "ذبحة غير نمطية", "ألم غير قلبي"][fd['cp']], "الذبحة النمطية مؤشر قوي", "high-risk" if fd['cp'] == 1 else "normal"),
+            ("ضغط الدم", f"{fd['trestbps']} mmHg", "الطبيعي أقل من 120 (تابع باستمرار)", "high-risk" if fd['trestbps'] > 140 else ("warning" if fd['trestbps'] > 120 else "normal")),
+            ("الكوليسترول", f"{fd['chol']} mg/dL", "الطبيعي أقل من 200 (قلل الدهون)", "high-risk" if fd['chol'] > 240 else ("warning" if fd['chol'] > 200 else "normal")),
+            ("سكر الدم صائم", fd['fbs'], "أكثر من 120 = مرتفع (قلل السكر)", "high-risk" if fd['fbs'] == 'نعم' else "normal"),
+            ("تخطيط القلب", ["طبيعي", "شذوذ ST-T", "تضخم بطين أيسر"][fd['restecg']], "تخطيط كهربائي (افحص دورياً)", "normal"),
+            ("أقصى نبض", f"{fd['thalach']} bpm", "المتوقع: 220 - العمر", "warning" if fd['thalach'] < 100 else "normal"),
+            ("ألم مع المجهود", fd['exang'], "نعم = علامة خطر (توقف عن الجهد)", "high-risk" if fd['exang'] == 'نعم' else "normal"),
+            ("انخفاض ST", f"{fd['oldpeak']} mm", "أكثر من 2 = نقص تروية (خطر)", "high-risk" if fd['oldpeak'] > 2 else "normal"),
+            ("ميل الموجة", ["صاعد", "مسطح", "هابط"][fd['slope']], "الهابط أخطر (استشر طبيب)", "normal"),
+            ("الشرايين الملونة", f"{fd['ca']} شريان", "0 = طبيعي (حافظ على صحتك)", "high-risk" if fd['ca'] > 0 else "normal"),
+            ("الثلاسيميا", ["غير محدد", "ثابت", "طبيعي", "قابل للإصلاح"][fd['thal']], "فحص تصويري (تحليل جيني)", "normal")
+        ]
+
+        for ind, val, note, status in indicators:
+            note_class = f"note-{status}"
+            table_rows_html += f"""
+            <tr>
+                <td>{ind}</td>
+                <td><span class="premium-value-badge">{val}</span></td>
+                <td><span class="premium-note {note_class}">{note}</span></td>
+            </tr>
+            """
+
+        st.markdown(f"""
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th width="30%">المؤشر</th>
+                    <th width="25%">القيمة</th>
+                    <th width="45%">النصيحة / الملاحظة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows_html}
+            </tbody>
+        </table>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
