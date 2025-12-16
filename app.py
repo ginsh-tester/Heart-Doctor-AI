@@ -391,27 +391,48 @@ st.markdown("""
         color: white !important;
     }
     
-    /* SLIDER RTL FIX - Comprehensive fix for thumb sync */
-    .stSlider,
-    .stSlider > div,
-    .stSlider > div > div,
-    .stSlider > div > div > div,
+    /* SLIDER RTL FIX - Complete solution */
+    /* Isolate slider from RTL inheritance */
+    .stSlider {
+        direction: ltr !important;
+        unicode-bidi: isolate !important;
+    }
+    
+    /* Target all slider internal elements */
+    .stSlider *,
     .stSlider [data-baseweb="slider"],
-    .stSlider [data-baseweb="slider"] > div,
-    .stSlider [role="slider"],
-    div[data-testid="stSlider"],
-    div[data-testid="stSlider"] > div {
+    .stSlider [data-baseweb="slider"] *,
+    [data-testid="stSlider"],
+    [data-testid="stSlider"] * {
         direction: ltr !important;
-        unicode-bidi: bidi-override !important;
+        text-align: left !important;
     }
     
-    /* Slider track and thumb styling */
-    .stSlider [data-baseweb="slider"] [role="slider"] {
+    /* Reset any transform issues on the thumb */
+    .stSlider [role="slider"] {
+        direction: ltr !important;
+        transform: none !important;
+        left: auto !important;
+        right: auto !important;
+    }
+    
+    /* Ensure track is LTR */
+    .stSlider [data-baseweb="slider"] > div:first-child {
         direction: ltr !important;
     }
     
-    .stSlider [data-baseweb="slider"] div[role="slider"] {
-        transform: translateX(-50%) !important;
+    /* Fix value label position */
+    .stSlider [data-testid="stTickBarMin"],
+    .stSlider [data-testid="stTickBarMax"],
+    .stSlider [data-baseweb="slider"] + div {
+        direction: ltr !important;
+        text-align: center !important;
+    }
+    
+    /* Keep slider label RTL for Arabic */
+    .stSlider label {
+        direction: rtl !important;
+        text-align: right !important;
     }
 
     /* ENCYCLOPEDIA CARDS */
